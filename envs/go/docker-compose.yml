@@ -1,0 +1,24 @@
+services:
+  go-dev:
+    extends:
+      file: ../common.yml
+      service: base-dev
+    build:
+      context: ..
+      dockerfile: Dockerfile.base
+      args:
+        - BASE_IMAGE=golang:latest
+        - UID=${UID:-1000}
+        - GID=${GID:-1000}
+    image: dev-go:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-dev}-go
+    volumes:
+      - ../../volumes/go-pkg:/go/pkg
+    environment:
+      - GOPATH=/go
+      - GOCACHE=/go/cache
+    command: bash
+
+networks:
+  dev-network:
+    driver: bridge

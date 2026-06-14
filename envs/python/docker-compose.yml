@@ -1,0 +1,25 @@
+services:
+  python-dev:
+    extends:
+      file: ../common.yml
+      service: base-dev
+    build:
+      context: ..
+      dockerfile: Dockerfile.base
+      args:
+        - BASE_IMAGE=python:3.12
+        - UID=${UID:-1000}
+        - GID=${GID:-1000}
+        - PIP_PACKAGES=black flake8 pytest ipython
+    image: dev-python:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-dev}-python
+    volumes:
+      - ../../volumes/python-pip:/home/dev/.cache/pip
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    command: bash
+
+networks:
+  dev-network:
+    driver: bridge

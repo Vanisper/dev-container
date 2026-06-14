@@ -1,0 +1,41 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+ARG UID=1000
+ARG GID=1000
+ARG APT_PACKAGES="sudo git vim"
+ARG PIP_PACKAGES=""
+
+RUN existing_group="$(getent group "${GID}" | cut -d: -f1)" && \
+    if [ -n "$existing_group" ]; then \
+        group_name="$existing_group"; \
+    elif getent group dev >/dev/null; then \
+        groupmod -g "${GID}" dev && group_name=dev; \
+    else \
+        groupadd -g "${GID}" dev && group_name=dev; \
+    fi && \
+    existing_user="$(getent passwd "${UID}" | cut -d: -f1)" && \
+    if [ -n "$existing_user" ] && [ "$existing_user" != dev ] && id dev >/dev/null 2>&1; then \
+        userdel -r dev; \
+    fi && \
+    if [ -n "$existing_user" ]; then \
+        usermod -l dev -d /home/dev -m -g "$group_name" -s /bin/bash "$existing_user"; \
+    elif id dev >/dev/null 2>&1; then \
+        usermod -u "${UID}" -d /home/dev -m -g "$group_name" -s /bin/bash dev; \
+    else \
+        useradd -u "${UID}" -g "$group_name" -m -s /bin/bash dev; \
+    fi && \
+    mkdir -p /workspace /home/dev && \
+    chown -R "${UID}:${GID}" /workspace /home/dev && \
+    apt-get update && apt-get install -y ${APT_PACKAGES} && \
+    echo "dev ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN if [ -n "$PIP_PACKAGES" ]; then \
+        pip install --no-cache-dir $PIP_PACKAGES; \
+    fi
+
+USER dev
+WORKDIR /workspace
+
+CMD ["bash"]

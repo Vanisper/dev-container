@@ -1,0 +1,26 @@
+services:
+  rust-dev:
+    extends:
+      file: ../common.yml
+      service: base-dev
+    build:
+      context: ..
+      dockerfile: Dockerfile.base
+      args:
+        - BASE_IMAGE=rust:latest
+        - UID=${UID:-1000}
+        - GID=${GID:-1000}
+        - APT_PACKAGES=sudo git vim pkg-config libssl-dev
+    image: dev-rust:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-dev}-rust
+    volumes:
+      - ../../volumes/rust-cargo:/usr/local/cargo/registry
+      - ../../volumes/rust-target:/workspace/.cache/rust-target
+    environment:
+      - CARGO_HOME=/usr/local/cargo
+      - CARGO_TARGET_DIR=/workspace/.cache/rust-target
+    command: bash
+
+networks:
+  dev-network:
+    driver: bridge
