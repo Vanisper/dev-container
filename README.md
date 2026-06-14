@@ -198,6 +198,29 @@ Mac 用户常见 UID/GID 是 `501/20`，Linux 用户常见是 `1000/1000`。Dock
 - UID 通常为 `1000`，脚本自动适配
 - 无需额外配置
 
+## 初始化问题排查
+
+`make init` 会先从 Docker Hub 拉取基础镜像，例如 `rust:latest`、`golang:latest`、`node:lts`、`python:3.12`。如果看到类似下面的错误：
+
+```text
+failed to resolve source metadata for docker.io/library/rust:latest
+failed to do request ... production.cloudfront.docker.com ... EOF
+```
+
+这通常是 Docker Hub 或其 CDN 访问失败，不是 compose 配置错误。可以先单独验证拉取：
+
+```bash
+docker pull rust:latest
+```
+
+如果单独拉取也失败，优先检查网络、代理或 Docker Desktop/Colima 的 registry mirror 配置。配置好镜像源后再重新执行：
+
+```bash
+make init ENV=rust
+```
+
+`Dockerfile.base` 中的 `BASE_IMAGE` 只是为了让不同语言环境复用同一个 Dockerfile；各环境实际使用的基础镜像由对应 `envs/<name>/docker-compose.yml` 里的 `build.args.BASE_IMAGE` 指定。
+
 ## 扩展新环境
 
 以添加 **Java** 为例：
