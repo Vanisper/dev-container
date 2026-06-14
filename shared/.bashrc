@@ -4,3 +4,8 @@ alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
 alias ..='cd ..'
+
+#region Python 相关
+alias python='python3'
+alias pip='pip3'
+#endregion
