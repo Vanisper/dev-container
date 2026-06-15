@@ -10,6 +10,7 @@ services:
         - BASE_IMAGE=golang:latest
         - UID=${DEV_UID:-1000}
         - GID=${DEV_GID:-1000}
+        - APT_MIRROR=${APT_MIRROR:-}
     image: dev-go:latest
     container_name: ${COMPOSE_PROJECT_NAME:-dev}-go
     volumes:

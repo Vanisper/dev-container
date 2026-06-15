@@ -10,6 +10,7 @@ services:
         - BASE_IMAGE=node:lts
         - UID=${DEV_UID:-1000}
         - GID=${DEV_GID:-1000}
+        - APT_MIRROR=${APT_MIRROR:-}
     image: dev-node:latest
     container_name: ${COMPOSE_PROJECT_NAME:-dev}-node
     volumes:

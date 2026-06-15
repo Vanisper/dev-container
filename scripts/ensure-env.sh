@@ -45,6 +45,7 @@ fi
 workspace_host=$(get_env_value WORKSPACE_HOST)
 shared_host=$(get_env_value SHARED_HOST)
 compose_project_name=$(get_env_value COMPOSE_PROJECT_NAME)
+apt_mirror=$(get_env_value APT_MIRROR)
 dev_uid=$(get_env_value DEV_UID)
 dev_gid=$(get_env_value DEV_GID)
 legacy_uid=$(get_env_value UID)
@@ -68,6 +69,9 @@ fi
 if [ -z "$workspace_host" ] || [ -z "$shared_host" ] || [ -z "$compose_project_name" ]; then
     needs_update=1
 fi
+if ! grep -q '^APT_MIRROR=' .env; then
+    needs_update=1
+fi
 if ! grep -q '容器内 dev 用户 ID' .env; then
     needs_update=1
 fi
@@ -87,6 +91,10 @@ DEV_GID=$target_gid
 
 # 容器名前缀（避免多人共用服务器冲突）
 COMPOSE_PROJECT_NAME=${compose_project_name:-dev}
+
+# 可选：Debian apt 镜像源。服务器访问 deb.debian.org 很慢时可启用。
+# 示例：APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/debian
+APT_MIRROR=${apt_mirror:-}
 EOF
     mv "$tmp_env" .env
     echo "✅ 已更新 .env"

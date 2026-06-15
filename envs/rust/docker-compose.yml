@@ -10,7 +10,8 @@ services:
         - BASE_IMAGE=rust:latest
         - UID=${DEV_UID:-1000}
         - GID=${DEV_GID:-1000}
-        - APT_PACKAGES=sudo git vim pkg-config libssl-dev
+        - APT_MIRROR=${APT_MIRROR:-}
+        - APT_PACKAGES=sudo git vim ca-certificates pkg-config libssl-dev
     image: dev-rust:latest
     container_name: ${COMPOSE_PROJECT_NAME:-dev}-rust
     volumes:

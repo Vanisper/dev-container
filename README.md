@@ -224,6 +224,14 @@ make init ENV=rust
 
 `Dockerfile.base` 中的 `BASE_IMAGE` 只是为了让不同语言环境复用同一个 Dockerfile；各环境实际使用的基础镜像由对应 `envs/<name>/docker-compose.yml` 里的 `build.args.BASE_IMAGE` 指定。
 
+如果构建长时间停在 `apt-get update` 或 `apt-get install`，通常是服务器访问 Debian 源较慢。可以在 `.env` 中配置更近的 apt 镜像源：
+
+```bash
+APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/debian
+```
+
+基础镜像默认安装 `sudo git vim ca-certificates`，Rust 额外安装 `pkg-config libssl-dev`。如果服务器构建时下载 `vim-runtime` 等 Debian 包很慢，优先配置上面的 `APT_MIRROR`，再重新执行 `make init ENV=<name>`。
+
 ## 扩展新环境
 
 以添加 **Java** 为例：
