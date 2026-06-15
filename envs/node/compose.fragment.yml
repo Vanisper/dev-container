@@ -1,0 +1,7 @@
+services:
+  dev:
+    volumes:
+      - ${PROJECT_ROOT:-.}/volumes/node-cache:/opt/dev-env/node/cache
+    environment:
+      NODE_HOME: /opt/dev-env/node/toolchain
+      NPM_CONFIG_CACHE: /opt/dev-env/node/cache/npm

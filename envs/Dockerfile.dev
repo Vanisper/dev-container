@@ -1,0 +1,74 @@
+ARG BASE_IMAGE=debian:bookworm-slim
+FROM ${BASE_IMAGE}
+
+ARG DEV_UID=1000
+ARG DEV_GID=1000
+ARG APT_MIRROR=""
+ARG ENABLED_ENVS=""
+ARG SOURCE_PROFILE=""
+
+ENV DEBIAN_FRONTEND=noninteractive
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+LABEL dev-container.project="dev-container"
+
+RUN if [ "${DEV_UID}" = "0" ] || [ "${DEV_GID}" = "0" ]; then \
+        echo "UID/GID must not be 0. Regenerate .env with scripts/ensure-env.sh; root hosts should use DEV_UID/DEV_GID=1000." >&2; \
+        exit 1; \
+    fi && \
+    existing_group="$(getent group "${DEV_GID}" | cut -d: -f1 || true)" && \
+    if [ -n "$existing_group" ]; then \
+        group_name="$existing_group"; \
+    elif getent group dev >/dev/null; then \
+        groupmod -g "${DEV_GID}" dev && group_name=dev; \
+    else \
+        groupadd -g "${DEV_GID}" dev && group_name=dev; \
+    fi && \
+    existing_user="$(getent passwd "${DEV_UID}" | cut -d: -f1 || true)" && \
+    if [ -n "$existing_user" ] && [ "$existing_user" != dev ] && id dev >/dev/null 2>&1; then \
+        userdel -r dev; \
+    fi && \
+    if [ -n "$existing_user" ]; then \
+        usermod -l dev -d /home/dev -m -g "$group_name" -s /bin/bash "$existing_user"; \
+    elif id dev >/dev/null 2>&1; then \
+        usermod -u "${DEV_UID}" -d /home/dev -m -g "$group_name" -s /bin/bash dev; \
+    else \
+        useradd -u "${DEV_UID}" -g "$group_name" -m -s /bin/bash dev; \
+    fi && \
+    mkdir -p /workspace /home/dev && \
+    chown -R "${DEV_UID}:${DEV_GID}" /workspace /home/dev
+
+RUN if [ -n "$APT_MIRROR" ]; then \
+        for sources_file in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources; do \
+            [ -f "$sources_file" ] || continue; \
+            sed -i "s#http://deb.debian.org/debian#${APT_MIRROR}#g; s#http://security.debian.org/debian-security#${APT_MIRROR}-security#g" "$sources_file"; \
+        done; \
+    fi && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        sudo git vim tmux ca-certificates curl wget xz-utils tar gzip unzip \
+        make build-essential pkg-config libssl-dev zlib1g-dev libbz2-dev \
+        libreadline-dev libsqlite3-dev libffi-dev liblzma-dev libncursesw5-dev \
+        libgdbm-dev libdb-dev tk-dev uuid-dev && \
+    echo "dev ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY envs /opt/dev-container/envs
+
+RUN chmod +x /opt/dev-container/envs/install-envs.sh /opt/dev-container/envs/*/install.sh && \
+    SOURCE_PROFILE="${SOURCE_PROFILE}" \
+    DEV_ENV_HOME=/opt/dev-env \
+    /opt/dev-container/envs/install-envs.sh "${ENABLED_ENVS}" && \
+    mkdir -p \
+        /workspace /home/dev /opt/dev-env && \
+    chown -R "${DEV_UID}:${DEV_GID}" \
+        /workspace /home/dev /opt/dev-env && \
+    rm -rf /tmp/*
+
+ENV DEV_ENV_HOME=/opt/dev-env \
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+USER dev
+WORKDIR /workspace
+
+CMD ["bash"]

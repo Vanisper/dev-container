@@ -1,62 +1,81 @@
 # dev-container
 
-跨平台（Mac / Linux）多环境 Docker 开发套件。支持 Rust、Go、Node、Python 等环境独立管理、按需启动。
+跨平台（Mac / Linux）统一 Docker 开发容器。通过 `ENV` 选择要启用的工具链，然后进入同一个 `dev` 容器工作。
 
 ## 项目定位
 
-这个仓库只负责管理本机或服务器上的语言开发容器：初始化环境、启动/停止容器、进入容器、共享工作区和开发者配置。
+这个仓库只负责管理本机或服务器上的开发容器：构建工具链、启动/停止容器、进入容器、共享工作区和开发者配置。
 
 它不负责某个具体项目的编译、测试、启动或发布。`workspace/` 下可以放多个项目，每个项目应该在自己的目录里保留自己的 `Makefile`、`package.json`、`Cargo.toml`、`go.mod`、`pyproject.toml` 等工程配置。
 
+## 核心模型
+
+`ENV` 表示“当前 dev 容器启用哪些工具链”，不是“进入哪个容器”。
+
+```bash
+make up ENV=go,python
+make enter
+```
+
+上面的命令会构建并启动一个统一 `dev` 容器，里面同时有 Go、Python 和 pip。再次执行：
+
+```bash
+make up ENV=node
+make enter
+```
+
+当前激活环境会替换成只包含 Node.js 的 dev 容器。
+
+支持的工具链：
+
+- `go`
+- `node`
+- `python`
+- `rust`
+- `all`
+
 ## 目录结构
 
-```
+```text
 dev-container/
-├── envs/                  # 所有环境定义（集中归集）
-│   ├── common.yml         # 共享网络、卷、基础配置
-│   ├── Dockerfile.base    # 各语言环境共用的基础 Dockerfile
-│   ├── rust/
-│   │   └── docker-compose.yml
+├── envs/
+│   ├── Dockerfile.dev          # 统一 dev 镜像
+│   ├── docker-compose.template.yml
+│   ├── install-envs.sh         # 构建期工具链安装入口
 │   ├── go/
+│   │   ├── metadata.env
+│   │   ├── install.sh
+│   │   ├── profile.sh
+│   │   ├── sources.env
+│   │   └── compose.fragment.yml
 │   ├── node/
-│   └── python/
-├── scripts/               # 统一操作脚本
-│   ├── init.sh            # 初始化指定环境
-│   ├── enter.sh           # 进入指定环境
-│   └── tmux.sh            # 进入/附着指定环境的 Tmux 会话
-├── docs/                  # 示例文档
-│   └── rust-hello-api.md  # Rust hello-api 与 Cargo 包管理示例
-├── workspace/             # 代码工作区（按项目分）
-│   └── hello-api/
-├── volumes/               # 容器数据卷（缓存、编译产物）
-│   ├── rust-cargo/
-│   ├── rust-target/
-│   ├── go-pkg/
-│   ├── node-cache/
-│   └── ...
-├── shared/                # 跨容器共享配置（所有容器共用）
-│   ├── .gitconfig
-│   ├── .ssh/
-│   ├── .bashrc
-│   ├── .vimrc
-│   └── .tmux.conf
+│   ├── python/
+│   └── rust/
+├── scripts/
+│   ├── init.sh
+│   ├── up.sh
+│   ├── enter.sh
+│   ├── tmux.sh
+│   └── lib/envs.sh
+├── workspace/                  # 代码工作区（按项目分）
+├── volumes/                    # Go/Node/Python/Rust 缓存
+├── shared/                     # git、ssh、bash、vim、tmux 配置
+├── .generated/                 # 运行时生成的 compose 文件，本地文件，不提交
 ├── .env
+├── .active-env                 # 当前激活工具链，本地文件，不提交
 ├── Makefile
 └── README.md
 ```
 
-`volumes/` 下的语言缓存目录由 `make init` 按需创建，属于运行时数据；仓库只保留目录约定，不提交缓存内容。
+`envs/<name>` 是工具链模块目录，不再是独立容器目录。新增工具链时，优先在这里补充 `metadata.env`、`install.sh` 和 `profile.sh`。
 
 ## 快速开始
 
 ```bash
-# 1. 初始化（生成 .env、构建镜像）
-make init
+# 1. 构建并启动 Rust 工具链
+make up ENV=rust
 
-# 2. 启动 Rust 环境
-make up
-
-# 3. 进入开发
+# 2. 进入统一 dev 容器
 make enter
 
 # 容器内
@@ -67,88 +86,99 @@ cargo run
 
 更完整的 Cargo 包管理示例见 [docs/rust-hello-api.md](docs/rust-hello-api.md)。
 
-## 多环境操作
-
-### 初始化多个环境
-```bash
-make init ENV=rust,go       # 同时初始化 Rust 和 Go
-make init ENV=all           # 初始化所有环境（rust, go, node, python）
-```
-
-### 启动多个环境
-```bash
-make up ENV=rust,go         # 同时启动 Rust 和 Go 容器
-make up ENV=all             # 启动全部
-```
-
-### 进入指定环境
-```bash
-make enter ENV=go           # 进入 Go 容器
-make enter ENV=node         # 进入 Node 容器
-make enter ENV=python       # 进入 Python 容器
-make tmux ENV=rust          # 进入/附着 Rust 容器里的 Tmux 会话
-```
-
-### 停止环境
-```bash
-make down ENV=rust,go
-make down ENV=all
-```
-
 ## 常用命令
 
 | 命令 | 说明 |
 |------|------|
-| `make init` | 初始化默认环境（rust） |
-| `make init ENV=all` | 初始化所有环境 |
-| `make up` | 启动默认环境 |
-| `make up ENV=rust,go` | 启动多个环境 |
-| `make down` | 停止默认环境 |
-| `make enter` | 进入默认环境 |
-| `make enter ENV=go` | 进入指定环境 |
-| `make tmux` | 进入/附着默认环境的 Tmux 会话 |
-| `make tmux ENV=go` | 进入/附着指定环境的 Tmux 会话 |
-| `make logs` | 查看容器日志 |
-| `make clean` | 清理所有镜像和容器 |
+| `make init ENV=go@auto,python` | 生成/修复 `.env` 和目录，构建组合镜像，不启动 |
+| `make up ENV=go,python` | 构建并启动统一 dev 容器，激活 Go + Python |
+| `make up ENV=all` | 构建并启动包含全部工具链的 dev 容器 |
+| `make enter` | 进入当前已启动的统一 dev 容器 |
+| `make tmux` | 进入/附着当前 dev 容器里的 tmux 会话 |
+| `make down` | 停止当前 dev 容器，保留 `.active-env` |
+| `make logs` | 查看当前 dev 容器日志 |
+| `make clean` | 清理 dev 容器和本项目组合镜像，保留 `volumes/` |
 | `make help` | 显示所有命令 |
 
-项目的编译、测试、启动命令建议进入对应环境后，在具体项目目录内执行，例如：
+`make up` 和 `make init` 必须显式传 `ENV`。`make enter ENV=go` 是旧用法，现在应写成：
 
 ```bash
-make enter ENV=node
-cd /workspace/hello-api/web
-npm test
+make up ENV=go
+make enter
 ```
 
-## 核心设计
+`ENV` 支持 source profile：
 
-### 1. 环境集中归集（envs/）
-
-所有环境定义集中在 `envs/` 下。每个环境有自己的 `docker-compose.yml`，共同复用 `envs/Dockerfile.base`：
-
-- **新增环境**：新增 `envs/<name>/docker-compose.yml`，指定 `BASE_IMAGE` 和环境特有挂载即可
-- **公共配置**：`envs/common.yml` 定义共享网络、shared 挂载、基础容器行为，各环境通过 `extends` 继承
-- **独立生命周期**：只启动你需要的环境，2 核服务器也不会爆
-- **自动发现环境**：`make init ENV=all`、`make up ENV=all` 和 `make clean` 会从 `envs/*/docker-compose.yml` 自动发现环境，不需要改 Makefile
-
-### 2. 按项目分 workspace
-
-`workspace/` 不按语言分，而是按项目分：
-
-```
-workspace/
-├── hello-api/          # 你的项目
-│   ├── src/            # Rust 后端
-│   ├── web/            # 前端
-│   └── scripts/        # Python 脚本
-└── another-service/
+```bash
+make up ENV=go@auto,python,rust@custom
 ```
 
-所有容器都把 `workspace/` 挂载到 `/workspace`。你在 **Rust 容器** 里编译 `hello-api/src/`，在 **Node 容器** 里跑 `hello-api/web/`，在 **Python 容器** 里跑 `hello-api/scripts/`，**同一套代码，不同环境处理不同部分**。
+- 不写 `@source` 等同 `@default`，不启用工具链镜像源。
+- `@auto` 使用模块内置镜像源。
+- `@custom` 读取 `.env` 中该工具链的自定义源变量；至少需要配置该工具链声明的一个变量。
+- source 分隔符使用 `@`；不要使用 `|`，它在 shell 里会被当作管道。
 
-为了避免不同项目互相污染，公共缓存尽量挂到语言工具自己的缓存目录。例如 Node 的 npm 缓存在 `/home/dev/.npm`，Rust 的 target 目录挂到 `/workspace/.cache/rust-target`。项目自己的依赖目录和构建命令仍由项目本身管理。
+## 构建机制
 
-### 3. 共享 shared（跨容器身份一致）
+统一镜像使用 `envs/Dockerfile.dev`：
+
+- 基础镜像是 `debian:bookworm-slim`
+- 创建非 root 的 `dev` 用户，并对齐宿主机 UID/GID
+- 安装基础工具：`sudo`、`git`、`vim`、`tmux`、`curl`、`build-essential` 等
+- 复制整个 `envs/` 到镜像内 `/opt/dev-container/envs`
+- 根据 build arg `ENABLED_ENVS` 执行 `/opt/dev-container/envs/install-envs.sh`
+- 按顺序安装 `go`、`node`、`python`、`rust`
+- 汇总已启用工具链的 `profile.sh` 到 `/etc/profile.d/dev-tools.sh`
+- 每次运行前由脚本把 `envs/docker-compose.template.yml` 和已启用模块的 `compose.fragment.yml` 合并到 `.generated/docker-compose.yml`
+
+默认精确版本：
+
+| 工具链 | 版本 | 安装方式 |
+|--------|------|----------|
+| Go | `1.26.4` | 从 `go.dev/dl` 下载官方 tarball |
+| Node.js | `24.16.0` | 从 `nodejs.org/dist` 下载官方 tarball |
+| Python | `3.12.13` | 从 `python.org` 下载源码编译，启用 `ensurepip` |
+| Rust | `1.96.0` | 使用 `rustup` 安装指定 toolchain |
+
+组合镜像按工具链命名，例如：
+
+```text
+dev-go-python:latest
+dev-node:latest
+dev-go-node-python-rust:latest
+```
+
+因此切回已构建过的组合可以复用 Docker 构建缓存和镜像。
+
+## 共享目录、缓存和模块片段
+
+统一 dev 容器固定挂载 workspace/shared，工具链缓存由对应模块贡献：
+
+| 宿主机路径 | 容器路径 |
+|------------|----------|
+| `${WORKSPACE_HOST}` | `/workspace` |
+| `${SHARED_HOST}/.gitconfig` | `/home/dev/.gitconfig:ro` |
+| `${SHARED_HOST}/.ssh` | `/home/dev/.ssh:ro` |
+| `${SHARED_HOST}/.bashrc` | `/home/dev/.bashrc:ro` |
+| `${SHARED_HOST}/.vimrc` | `/home/dev/.vimrc:ro` |
+| `${SHARED_HOST}/.tmux.conf` | `/home/dev/.tmux.conf:ro` |
+| `volumes/go-home` | `/opt/dev-env/go/home` |
+| `volumes/go-cache` | `/opt/dev-env/go/cache` |
+| `volumes/node-cache` | `/opt/dev-env/node/cache` |
+| `volumes/python-cache` | `/opt/dev-env/python/cache` |
+| `volumes/rust-cargo` | `/opt/dev-env/rust/home/cargo/registry` |
+| `volumes/rust-target` | `/opt/dev-env/rust/cache/target` |
+
+这些缓存目录会统一挂载，但只有启用对应工具链时才会使用。
+
+模块的 `compose.fragment.yml` 只允许贡献：
+
+- `services.dev.volumes`
+- `services.dev.environment`
+
+`build`、`build.args`、`container_name`、`networks`、`command` 等关键配置由中心模板控制，模块不能覆盖。
+
+## shared 配置
 
 `shared/` 目录存放跨容器共用的开发者配置和身份凭证：
 
@@ -160,131 +190,81 @@ workspace/
 | `.vimrc` | Vim 编辑器配置 |
 | `.tmux.conf` | Tmux 按键、鼠标、状态栏和历史配置 |
 
-**为什么要共享？**
+容器每次重建都是干净的。通过挂载 `shared/`，Git 身份、SSH、bash、vim、tmux 配置可以在不同工具链组合之间复用。
 
-容器每次重建都是干净的。没有这些配置，你进容器后：
+## 环境变量与 PATH
 
-- `git commit` 报错 "Please tell me who you are"
-- `git clone git@github.com:...` 权限拒绝
-- vim 没有语法高亮，bash 没有 `ll` 别名
+工具链模块通过 `profile.sh` 写入 `/etc/profile.d/dev-tools.sh`。这样普通 shell、登录 shell 和 tmux pane 都能拿到一致的 PATH。
 
-通过 `envs/common.yml`，所有容器启动时自动把 `shared/` 中的配置挂载到 `/home/dev/`，**一次配置，所有环境生效**。
+启用对应工具链时会设置：
 
-**使用方式：**
+- Go：`GOROOT=/opt/dev-env/go/toolchain`、`GOPATH=/opt/dev-env/go/home`、`GOCACHE=/opt/dev-env/go/cache/build`
+- Node.js：`NODE_HOME=/opt/dev-env/node/toolchain`、`NPM_CONFIG_CACHE=/opt/dev-env/node/cache/npm`
+- Python：`PYTHON_HOME=/opt/dev-env/python/toolchain`、`PIP_CACHE_DIR=/opt/dev-env/python/cache/pip`、`PIP_CONFIG_FILE=/opt/dev-env/python/config/pip.conf`
+- Rust：`CARGO_HOME=/opt/dev-env/rust/home/cargo`、`RUSTUP_HOME=/opt/dev-env/rust/home/rustup`、`CARGO_TARGET_DIR=/opt/dev-env/rust/cache/target`
 
-1. 修改 `shared/.gitconfig` 填上你的真实姓名和邮箱
-2. 把你的 SSH 私钥复制到 `shared/.ssh/`（已加入 `.gitignore`，不会提交）
-3. 调整 `shared/.bashrc`、`.vimrc`、`.tmux.conf` 符合你的习惯
-4. 所有容器自动继承
-
-### 4. Tmux 会话
-
-基础镜像默认安装 `tmux`，并把 `shared/.tmux.conf` 挂载到容器内 `/home/dev/.tmux.conf`。普通 shell 入口仍然是：
-
-```bash
-make enter ENV=rust
-```
-
-如果希望进入后直接使用可恢复的 Tmux 会话：
-
-```bash
-make tmux ENV=rust
-```
-
-`make tmux` 会在容器未运行时自动启动容器，然后执行 `tmux new-session -A -s <env>`：已有会话会直接附着，没有会话会新建。默认会话名等于环境名，也可以临时指定：
-
-```bash
-TMUX_SESSION=work make tmux ENV=node
-```
-
-### 5. 用户身份设计
+## 用户身份
 
 容器内统一使用 `dev` 用户运行，而非 root：
 
-- **UID/GID 对齐**：`init.sh` 会把容器内 `dev` 用户使用的 `DEV_UID` 和 `DEV_GID` 写入 `.env`，`Dockerfile.base` 构建时用这组数字创建容器内的 `dev` 用户
-- **sudo 可用**：`dev` 拥有免密 sudo 权限，需要 root 时可以直接执行 `sudo apt install xxx`
-- **安全习惯**：日常开发不用 root，减少误操作风险；需要系统级权限时再显式使用 `sudo`
+- `ensure-env.sh` 会把宿主机 UID/GID 写入 `.env`
+- `Dockerfile.dev` 构建时用 `DEV_UID/DEV_GID` 创建容器内 `dev` 用户
+- `dev` 拥有免密 sudo 权限，需要 root 时可以执行 `sudo apt install xxx`
 
-**为什么要设置 UID/GID？**
+Linux 文件权限认数字 UID/GID。让容器内用户对齐宿主机用户，可以减少 `workspace/` 挂载后文件权限混乱的问题。
 
-Linux 文件权限认的是数字 UID/GID，而不是用户名。`workspace/` 是宿主机目录挂载到容器里的，如果容器内用户和宿主机用户的 UID/GID 不一致，容器创建的文件在宿主机上可能变成“别的用户”的文件，导致编辑器无法保存、`rm`/`git clean` 权限不足，或者 `node_modules`、`target`、缓存目录权限混乱。
+如果在 Linux 服务器上直接用 root 运行，脚本会把容器内 `dev` 固定为 `1000:1000`，避免把开发用户变成 root。
 
-Mac 用户常见 UID/GID 是 `501/20`，Linux 普通用户常见是 `1000/1000`。Docker Desktop for Mac 会做一层文件共享转换，所以问题有时不明显；但在 Colima、远程 Linux、CI 或直接使用 Linux Docker 时，UID/GID 不一致会更直接地暴露出来。因此初始化时会自动写入合适的 `DEV_UID/DEV_GID`，让容器内 `dev` 用户尽量像“宿主机当前用户”一样写文件。
+## 镜像源
 
-如果你在 Linux 服务器上直接用 `root` 用户运行，宿主机的 `id -u` 和 `id -g` 会是 `0/0`。容器内 `dev` 不能使用 `0/0`，否则就等于把开发用户变成 root，还会触发基础镜像里 root 用户无法被改名的问题。因此 `init.sh` 检测到宿主机是 root 时，会自动把容器内 `dev` 固定为 `1000/1000`，并整理 `workspace/`、`volumes/` 的目录权限。
-
-**sudo 免密是什么意思？**
-
-`Dockerfile.base` 里给 `dev` 用户配置了 `NOPASSWD` sudo。也就是说，容器里执行 `sudo apt install curl` 这类命令时不需要输入密码。这样既能保持日常开发不使用 root，又能在需要临时安装系统包时方便提权。这个设置只面向本地开发容器，不建议照搬到生产服务器。
-
-## 跨平台说明
-
-### Mac
-
-- `init.sh` 自动检测 UID（通常为 `501`）写入 `.env`
-- `Dockerfile.base` 创建同 UID 的 `dev` 用户，避免 Docker Desktop 挂载后的文件权限问题
-- 如果使用 Colima：`colima start --cpu 4 --memory 8`
-
-### Linux 服务器
-
-- 普通用户 UID/GID 通常为 `1000/1000`，脚本自动适配
-- 如果直接用 root 运行，脚本会让容器内 `dev` 使用 `1000/1000`，避免使用 `0/0`
-- 旧版 `.env` 中的 `UID/GID` 会在初始化时迁移为 `DEV_UID/DEV_GID`
-
-## 初始化问题排查
-
-`make init` 会先从 Docker Hub 拉取基础镜像，例如 `rust:latest`、`golang:latest`、`node:lts`、`python:3.12`。如果看到类似下面的错误：
-
-```text
-failed to resolve source metadata for docker.io/library/rust:latest
-failed to do request ... production.cloudfront.docker.com ... EOF
-```
-
-这通常是 Docker Hub 或其 CDN 访问失败，不是 compose 配置错误。可以先单独验证拉取：
-
-```bash
-docker pull rust:latest
-```
-
-如果单独拉取也失败，优先检查网络、代理或 Docker Desktop/Colima 的 registry mirror 配置。配置好镜像源后再重新执行：
-
-```bash
-make init ENV=rust
-```
-
-`Dockerfile.base` 中的 `BASE_IMAGE` 只是为了让不同语言环境复用同一个 Dockerfile；各环境实际使用的基础镜像由对应 `envs/<name>/docker-compose.yml` 里的 `build.args.BASE_IMAGE` 指定。
-
-如果构建长时间停在 `apt-get update` 或 `apt-get install`，通常是服务器访问 Debian 源较慢。可以在 `.env` 中配置更近的 apt 镜像源：
+如果构建长时间停在 `apt-get update` 或 `apt-get install`，可以在 `.env` 中配置 apt 镜像源：
 
 ```bash
 APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/debian
 ```
 
-基础镜像默认安装 `sudo git vim tmux ca-certificates`，Rust 额外安装 `pkg-config libssl-dev`。如果服务器构建时下载 `vim-runtime` 等 Debian 包很慢，优先配置上面的 `APT_MIRROR`，再重新执行 `make init ENV=<name>`。
-
-Python 环境还会在构建时安装 `black flake8 pytest ipython`。如果访问 PyPI 较慢，可以在 `.env` 中配置 pip 镜像源：
+工具链镜像源默认不开启。需要使用内置源时，在 ENV 里写 `@auto`：
 
 ```bash
-PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+make up ENV=go@auto,python@auto,rust@auto
 ```
 
-设置后会写入镜像内的 `/etc/pip.conf`，构建阶段和进入容器后的 `pip install` 都会默认使用这个源。修改后重新执行 `make init ENV=python` 即可生效。
-
-Rust 环境执行 `cargo add` 或 `cargo build` 时需要访问 crates.io。如果看到 `Could not resolve host: index.crates.io` 或 `Could not resolve host: static.crates.io`，通常是容器内 DNS 或网络无法访问 crates.io 索引或 crate 下载地址。可以在 `.env` 中配置 Cargo 镜像源：
+需要自定义源时，在 `.env` 里配置变量，并使用 `@custom`：
 
 ```bash
+GO_DOWNLOAD_MIRROR=
+NODE_DOWNLOAD_MIRROR=
+PYTHON_DOWNLOAD_MIRROR=
+PYTHON_PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+RUSTUP_DIST_SERVER=
+RUSTUP_UPDATE_ROOT=
 CARGO_REGISTRY_MIRROR=sparse+https://mirrors.ustc.edu.cn/crates.io-index/
 ```
 
-设置后会写入镜像内的 `$CARGO_HOME/config.toml`，让 crates.io 自动替换为镜像源。这里推荐 USTC 是因为它的 crates.io index 配置同时代理索引和 crate 包下载；TUNA 的 crates.io index 仍可能把包下载指向 `static.crates.io`。修改后重新执行 `make init ENV=rust`，再重新启动/进入 Rust 容器即可生效。
+`@custom` 不要求把某个工具链的所有源变量都填满；例如 Rust 只配置 `CARGO_REGISTRY_MIRROR` 也可以使用 `make up ENV=rust@custom`。
 
-## 扩展新环境
+修改这些配置后，需要重新执行对应组合的构建，例如：
 
-以添加 **Java** 为例：
+```bash
+make up ENV=python@custom
+make up ENV=rust@custom
+make up ENV=go@auto,python
+```
 
-1. 创建 `envs/java/docker-compose.yml`，继承 `common.yml`
-2. 在 `build.args` 中指定 `BASE_IMAGE=openjdk:21`
-3. 按需增加 Java 自己的缓存卷或环境变量
-4. 执行 `make init ENV=java` 和 `make up ENV=java`
+## 扩展新工具链
 
-参考现有 4 个环境的结构复制即可。
+以添加 `java` 为例：
+
+1. 创建 `envs/java/metadata.env`
+2. 创建 `envs/java/install.sh`，在基础镜像内安装 Java
+3. 创建 `envs/java/profile.sh`，写入 `JAVA_HOME` 和 PATH
+4. 创建 `envs/java/sources.env`，声明 `@auto` 和 `@custom` 可使用的源变量
+5. 创建 `envs/java/compose.fragment.yml`，只贡献 volumes 和 environment
+6. 在 `scripts/lib/envs.sh` 和 `envs/install-envs.sh` 的工具链列表中加入 `java`
+
+新增工具链后即可使用：
+
+```bash
+make up ENV=java
+make enter
+```

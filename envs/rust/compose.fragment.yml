@@ -1,0 +1,9 @@
+services:
+  dev:
+    volumes:
+      - ${PROJECT_ROOT:-.}/volumes/rust-cargo:/opt/dev-env/rust/home/cargo/registry
+      - ${PROJECT_ROOT:-.}/volumes/rust-target:/opt/dev-env/rust/cache/target
+    environment:
+      CARGO_HOME: /opt/dev-env/rust/home/cargo
+      RUSTUP_HOME: /opt/dev-env/rust/home/rustup
+      CARGO_TARGET_DIR: /opt/dev-env/rust/cache/target

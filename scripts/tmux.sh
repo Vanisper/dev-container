@@ -1,40 +1,29 @@
 #!/usr/bin/env bash
-
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
-list_envs() {
-    find envs -mindepth 2 -maxdepth 2 -name docker-compose.yml -exec dirname {} \; | sed 's#envs/##' | sort | sed 's/^/  - /'
-}
+# shellcheck source=lib/envs.sh
+source "$SCRIPT_DIR/lib/envs.sh"
 
-ENV_NAME=${1:-}
-SESSION_NAME=${TMUX_SESSION:-$ENV_NAME}
-
-if [ -z "$ENV_NAME" ]; then
-    echo "Usage: tmux.sh <env-name>"
-    echo "可用环境:"
-    list_envs
-    exit 1
-fi
-
-if [ ! -f "envs/$ENV_NAME/docker-compose.yml" ]; then
-    echo "❌ 环境 '$ENV_NAME' 不存在，可用环境:"
-    list_envs
+if [ -n "${1:-}" ]; then
+    echo "❌ make tmux 不再接收 ENV 参数。请先执行：make up ENV=${1}" >&2
+    echo "然后执行：make tmux" >&2
     exit 1
 fi
 
 "$SCRIPT_DIR/ensure-env.sh"
-ENV_PROJECT_NAME="$(sed -n 's/^COMPOSE_PROJECT_NAME=//p' .env | tail -n 1)"
-COMPOSE=(env "COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-${ENV_PROJECT_NAME:-dev}}" docker compose --env-file .env)
-COMPOSE+=(-f "envs/$ENV_NAME/docker-compose.yml")
+ACTIVE_ENVS="$(load_active_env)"
+DEV_IMAGE="$(dev_image_name "$ACTIVE_ENVS")"
+SESSION_NAME=${TMUX_SESSION:-dev}
+prepare_compose "$ACTIVE_ENVS" "$DEV_IMAGE"
+COMPOSE_EVAL="$(compose_cmd "$ACTIVE_ENVS" "$DEV_IMAGE")"
 
-SERVICE="${ENV_NAME}-dev"
-if ! "${COMPOSE[@]}" ps --services --filter status=running | grep -qx "$SERVICE"; then
-    echo "➡️  容器未运行，先启动..."
-    "${COMPOSE[@]}" up -d
+if ! eval "$COMPOSE_EVAL ps --services --filter status=running" | grep -qx "dev"; then
+    echo "❌ dev 容器未运行，请先执行：make up ENV=$ACTIVE_ENVS" >&2
+    exit 1
 fi
 
-"${COMPOSE[@]}" exec -it "$SERVICE" tmux new-session -A -s "$SESSION_NAME"
+eval "$COMPOSE_EVAL exec -it dev tmux new-session -A -s \"\$SESSION_NAME\""

@@ -1,0 +1,9 @@
+services:
+  dev:
+    volumes:
+      - ${PROJECT_ROOT:-.}/volumes/go-home:/opt/dev-env/go/home
+      - ${PROJECT_ROOT:-.}/volumes/go-cache:/opt/dev-env/go/cache
+    environment:
+      GOROOT: /opt/dev-env/go/toolchain
+      GOPATH: /opt/dev-env/go/home
+      GOCACHE: /opt/dev-env/go/cache/build

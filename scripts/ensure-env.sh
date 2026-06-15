@@ -34,6 +34,20 @@ DEV_GID=$DEFAULT_DEV_GID
 
 # 容器名前缀（避免多人共用服务器冲突）
 COMPOSE_PROJECT_NAME=dev
+
+# 可选：Debian apt 镜像源。服务器访问 deb.debian.org 很慢时可启用。
+# 示例：APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/debian
+APT_MIRROR=
+
+# 可选：工具链自定义镜像源。仅在 ENV 使用 <tool>@custom 时生效。
+GO_DOWNLOAD_MIRROR=
+NODE_DOWNLOAD_MIRROR=
+PYTHON_DOWNLOAD_MIRROR=
+PYTHON_PIP_INDEX_URL=
+RUSTUP_DIST_SERVER=
+RUSTUP_UPDATE_ROOT=
+# 示例：CARGO_REGISTRY_MIRROR=sparse+https://mirrors.ustc.edu.cn/crates.io-index/
+CARGO_REGISTRY_MIRROR=
 EOF
     echo "✅ 已生成 .env"
     if [ "$HOST_UID" = "0" ] || [ "$HOST_GID" = "0" ]; then
@@ -46,7 +60,13 @@ workspace_host=$(get_env_value WORKSPACE_HOST)
 shared_host=$(get_env_value SHARED_HOST)
 compose_project_name=$(get_env_value COMPOSE_PROJECT_NAME)
 apt_mirror=$(get_env_value APT_MIRROR)
-pip_index_url=$(get_env_value PIP_INDEX_URL)
+go_download_mirror=$(get_env_value GO_DOWNLOAD_MIRROR)
+node_download_mirror=$(get_env_value NODE_DOWNLOAD_MIRROR)
+python_download_mirror=$(get_env_value PYTHON_DOWNLOAD_MIRROR)
+python_pip_index_url=$(get_env_value PYTHON_PIP_INDEX_URL)
+legacy_pip_index_url=$(get_env_value PIP_INDEX_URL)
+rustup_dist_server=$(get_env_value RUSTUP_DIST_SERVER)
+rustup_update_root=$(get_env_value RUSTUP_UPDATE_ROOT)
 cargo_registry_mirror=$(get_env_value CARGO_REGISTRY_MIRROR)
 dev_uid=$(get_env_value DEV_UID)
 dev_gid=$(get_env_value DEV_GID)
@@ -74,7 +94,25 @@ fi
 if ! grep -q '^APT_MIRROR=' .env; then
     needs_update=1
 fi
-if ! grep -q '^PIP_INDEX_URL=' .env; then
+if grep -q '^PIP_INDEX_URL=' .env; then
+    needs_update=1
+fi
+if ! grep -q '^GO_DOWNLOAD_MIRROR=' .env; then
+    needs_update=1
+fi
+if ! grep -q '^NODE_DOWNLOAD_MIRROR=' .env; then
+    needs_update=1
+fi
+if ! grep -q '^PYTHON_DOWNLOAD_MIRROR=' .env; then
+    needs_update=1
+fi
+if ! grep -q '^PYTHON_PIP_INDEX_URL=' .env; then
+    needs_update=1
+fi
+if ! grep -q '^RUSTUP_DIST_SERVER=' .env; then
+    needs_update=1
+fi
+if ! grep -q '^RUSTUP_UPDATE_ROOT=' .env; then
     needs_update=1
 fi
 if ! grep -q '^CARGO_REGISTRY_MIRROR=' .env; then
@@ -104,11 +142,13 @@ COMPOSE_PROJECT_NAME=${compose_project_name:-dev}
 # 示例：APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/debian
 APT_MIRROR=${apt_mirror:-}
 
-# 可选：Python pip 镜像源。Python 环境构建和后续 pip install 会使用。
-# 示例：PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
-PIP_INDEX_URL=${pip_index_url:-}
-
-# 可选：Rust crates.io 镜像源。Rust 环境构建时会写入 Cargo config。
+# 可选：工具链自定义镜像源。仅在 ENV 使用 <tool>@custom 时生效。
+GO_DOWNLOAD_MIRROR=${go_download_mirror:-}
+NODE_DOWNLOAD_MIRROR=${node_download_mirror:-}
+PYTHON_DOWNLOAD_MIRROR=${python_download_mirror:-}
+PYTHON_PIP_INDEX_URL=${python_pip_index_url:-${legacy_pip_index_url:-}}
+RUSTUP_DIST_SERVER=${rustup_dist_server:-}
+RUSTUP_UPDATE_ROOT=${rustup_update_root:-}
 # 示例：CARGO_REGISTRY_MIRROR=sparse+https://mirrors.ustc.edu.cn/crates.io-index/
 CARGO_REGISTRY_MIRROR=${cargo_registry_mirror:-}
 EOF

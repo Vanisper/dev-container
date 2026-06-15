@@ -4,10 +4,11 @@
 
 ## 创建项目
 
-先从宿主机进入 Rust 容器，然后创建示例项目：
+先从宿主机构建并启动启用了 Rust 工具链的统一 dev 容器，然后创建示例项目：
 
 ```bash
-make enter ENV=rust
+make up ENV=rust
+make enter
 cd /workspace
 cargo new hello-api --bin
 cd hello-api
@@ -21,12 +22,12 @@ cd hello-api
 CARGO_REGISTRY_MIRROR=sparse+https://mirrors.ustc.edu.cn/crates.io-index/
 ```
 
-然后在宿主机重新初始化并进入 Rust 环境：
+然后在宿主机重新构建并进入启用了 Rust 工具链的 dev 容器：
 
 ```bash
-make init ENV=rust
-make up ENV=rust
-make enter ENV=rust
+make init ENV=rust@custom
+make up ENV=rust@custom
+make enter
 ```
 
 通过 `cargo add` 添加运行时依赖和测试依赖：
@@ -173,4 +174,4 @@ cargo metadata --format-version 1
 - `Cargo.toml`：声明直接依赖、dev 依赖和项目 feature
 - `Cargo.lock`：记录 Cargo 实际解析出来的精确版本，应用项目建议提交
 
-本仓库把 Rust registry 缓存挂载到 `volumes/rust-cargo/`，把构建产物放到 `/workspace/.cache/rust-target`。因此删除并重建 `workspace/hello-api` 后，已经下载过的 crates 和编译缓存仍然可以复用。
+本仓库把 Rust registry 缓存挂载到 `volumes/rust-cargo/`，把构建产物放到 `/opt/dev-env/rust/cache/target`。因此删除并重建 `workspace/hello-api` 后，已经下载过的 crates 和编译缓存仍然可以复用。

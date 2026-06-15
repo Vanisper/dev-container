@@ -1,0 +1,37 @@
+services:
+  dev:
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
+    working_dir: /workspace
+    build:
+      context: ${PROJECT_ROOT:-.}
+      dockerfile: envs/Dockerfile.dev
+      args:
+        DEV_UID: ${DEV_UID:-1000}
+        DEV_GID: ${DEV_GID:-1000}
+        APT_MIRROR: ${APT_MIRROR:-}
+        ENABLED_ENVS: ${ENABLED_ENVS:-}
+        SOURCE_PROFILE: ${SOURCE_PROFILE:-}
+    image: ${DEV_IMAGE:-dev-active:latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-dev}-dev
+    networks:
+      - dev-network
+    volumes:
+      - ${WORKSPACE_HOST:-./workspace}:/workspace
+      - ${SHARED_HOST:-./shared}/.gitconfig:/home/dev/.gitconfig:ro
+      - ${SHARED_HOST:-./shared}/.ssh:/home/dev/.ssh:ro
+      - ${SHARED_HOST:-./shared}/.bashrc:/home/dev/.bashrc:ro
+      - ${SHARED_HOST:-./shared}/.vimrc:/home/dev/.vimrc:ro
+      - ${SHARED_HOST:-./shared}/.tmux.conf:/home/dev/.tmux.conf:ro
+      # MODULE_VOLUMES
+    environment:
+      ENABLED_ENVS: ${ENABLED_ENVS:-}
+      DEV_ENV_HOME: ${DEV_ENV_HOME:-/opt/dev-env}
+      PATH: ${DEV_ENV_PATH:-/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}
+      # MODULE_ENVIRONMENT
+    command: bash
+
+networks:
+  dev-network:
+    driver: bridge

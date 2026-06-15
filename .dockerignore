@@ -1,0 +1,11 @@
+.git
+.generated
+.active-env
+.env
+volumes
+workspace
+shared/.ssh
+.DS_Store
+*.swp
+*.swo
+*~

@@ -1,0 +1,8 @@
+services:
+  dev:
+    volumes:
+      - ${PROJECT_ROOT:-.}/volumes/python-cache:/opt/dev-env/python/cache
+    environment:
+      PYTHON_HOME: /opt/dev-env/python/toolchain
+      PIP_CACHE_DIR: /opt/dev-env/python/cache/pip
+      PIP_CONFIG_FILE: /opt/dev-env/python/config/pip.conf
