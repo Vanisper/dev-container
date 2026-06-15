@@ -5,7 +5,7 @@ FROM ${BASE_IMAGE}
 ARG UID=1000
 ARG GID=1000
 ARG APT_MIRROR=""
-ARG APT_PACKAGES="sudo git vim ca-certificates"
+ARG APT_PACKAGES="sudo git vim tmux ca-certificates"
 ARG PIP_INDEX_URL=""
 ARG PIP_PACKAGES=""
 

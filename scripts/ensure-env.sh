@@ -25,7 +25,7 @@ if [ ! -f .env ]; then
 # 代码工作区（按项目分，所有容器共享）
 WORKSPACE_HOST=$PROJECT_ROOT/workspace
 
-# 共享配置路径（git、ssh、bash、vim 等，所有容器共用）
+# 共享配置路径（git、ssh、bash、vim、tmux 等，所有容器共用）
 SHARED_HOST=$PROJECT_ROOT/shared
 
 # 容器内 dev 用户 ID（Mac 通常是 501，Linux 普通用户通常是 1000；root 宿主机也使用 1000）
@@ -86,7 +86,7 @@ if [ "$needs_update" = "1" ]; then
 # 代码工作区（按项目分，所有容器共享）
 WORKSPACE_HOST=${workspace_host:-$PROJECT_ROOT/workspace}
 
-# 共享配置路径（git、ssh、bash、vim 等，所有容器共用）
+# 共享配置路径（git、ssh、bash、vim、tmux 等，所有容器共用）
 SHARED_HOST=${shared_host:-$PROJECT_ROOT/shared}
 
 # 容器内 dev 用户 ID（Mac 通常是 501，Linux 普通用户通常是 1000；root 宿主机也使用 1000）

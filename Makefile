@@ -18,7 +18,7 @@ else
 	ENVS := $(subst $(comma),$(space),$(ENV))
 endif
 
-.PHONY: ensure-env init up down enter clean logs help
+.PHONY: ensure-env init up down enter tmux clean logs help
 
 ensure-env:
 	@./scripts/ensure-env.sh
@@ -34,6 +34,9 @@ down: ensure-env ## 停止环境，如 make down ENV=rust,go
 
 enter: ## 进入指定环境（单次一个），如 make enter ENV=go
 	@./scripts/enter.sh $(ENV)
+
+tmux: ## 进入/附着指定环境的 Tmux 会话，如 make tmux ENV=go
+	@./scripts/tmux.sh $(ENV)
 
 clean: ensure-env ## 清理所有镜像和容器（保留 volumes）
 	@for env in $(AVAILABLE_ENVS); do 		$(COMPOSE) -f envs/$$env/docker-compose.yml down --rmi local 2>/dev/null || true; 	done

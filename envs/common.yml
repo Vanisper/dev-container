@@ -12,3 +12,4 @@ services:
       - ${SHARED_HOST:-../shared}/.ssh:/home/dev/.ssh:ro
       - ${SHARED_HOST:-../shared}/.bashrc:/home/dev/.bashrc:ro
       - ${SHARED_HOST:-../shared}/.vimrc:/home/dev/.vimrc:ro
+      - ${SHARED_HOST:-../shared}/.tmux.conf:/home/dev/.tmux.conf:ro

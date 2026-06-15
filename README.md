@@ -22,7 +22,8 @@ dev-container/
 │   └── python/
 ├── scripts/               # 统一操作脚本
 │   ├── init.sh            # 初始化指定环境
-│   └── enter.sh           # 进入指定环境
+│   ├── enter.sh           # 进入指定环境
+│   └── tmux.sh            # 进入/附着指定环境的 Tmux 会话
 ├── workspace/             # 代码工作区（按项目分）
 │   └── hello-api/
 ├── volumes/               # 容器数据卷（缓存、编译产物）
@@ -35,7 +36,8 @@ dev-container/
 │   ├── .gitconfig
 │   ├── .ssh/
 │   ├── .bashrc
-│   └── .vimrc
+│   ├── .vimrc
+│   └── .tmux.conf
 ├── .env
 ├── Makefile
 └── README.md
@@ -80,6 +82,7 @@ make up ENV=all             # 启动全部
 make enter ENV=go           # 进入 Go 容器
 make enter ENV=node         # 进入 Node 容器
 make enter ENV=python       # 进入 Python 容器
+make tmux ENV=rust          # 进入/附着 Rust 容器里的 Tmux 会话
 ```
 
 ### 停止环境
@@ -99,6 +102,8 @@ make down ENV=all
 | `make down` | 停止默认环境 |
 | `make enter` | 进入默认环境 |
 | `make enter ENV=go` | 进入指定环境 |
+| `make tmux` | 进入/附着默认环境的 Tmux 会话 |
+| `make tmux ENV=go` | 进入/附着指定环境的 Tmux 会话 |
 | `make logs` | 查看容器日志 |
 | `make clean` | 清理所有镜像和容器 |
 | `make help` | 显示所有命令 |
@@ -149,6 +154,7 @@ workspace/
 | `.ssh/` | SSH 密钥，用于 `git clone` 私有仓库 |
 | `.bashrc` | Shell 别名、提示符风格 |
 | `.vimrc` | Vim 编辑器配置 |
+| `.tmux.conf` | Tmux 按键、鼠标、状态栏和历史配置 |
 
 **为什么要共享？**
 
@@ -164,10 +170,30 @@ workspace/
 
 1. 修改 `shared/.gitconfig` 填上你的真实姓名和邮箱
 2. 把你的 SSH 私钥复制到 `shared/.ssh/`（已加入 `.gitignore`，不会提交）
-3. 调整 `shared/.bashrc`、`.vimrc` 符合你的习惯
+3. 调整 `shared/.bashrc`、`.vimrc`、`.tmux.conf` 符合你的习惯
 4. 所有容器自动继承
 
-### 4. 用户身份设计
+### 4. Tmux 会话
+
+基础镜像默认安装 `tmux`，并把 `shared/.tmux.conf` 挂载到容器内 `/home/dev/.tmux.conf`。普通 shell 入口仍然是：
+
+```bash
+make enter ENV=rust
+```
+
+如果希望进入后直接使用可恢复的 Tmux 会话：
+
+```bash
+make tmux ENV=rust
+```
+
+`make tmux` 会在容器未运行时自动启动容器，然后执行 `tmux new-session -A -s <env>`：已有会话会直接附着，没有会话会新建。默认会话名等于环境名，也可以临时指定：
+
+```bash
+TMUX_SESSION=work make tmux ENV=node
+```
+
+### 5. 用户身份设计
 
 容器内统一使用 `dev` 用户运行，而非 root：
 
@@ -230,7 +256,7 @@ make init ENV=rust
 APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/debian
 ```
 
-基础镜像默认安装 `sudo git vim ca-certificates`，Rust 额外安装 `pkg-config libssl-dev`。如果服务器构建时下载 `vim-runtime` 等 Debian 包很慢，优先配置上面的 `APT_MIRROR`，再重新执行 `make init ENV=<name>`。
+基础镜像默认安装 `sudo git vim tmux ca-certificates`，Rust 额外安装 `pkg-config libssl-dev`。如果服务器构建时下载 `vim-runtime` 等 Debian 包很慢，优先配置上面的 `APT_MIRROR`，再重新执行 `make init ENV=<name>`。
 
 Python 环境还会在构建时安装 `black flake8 pytest ipython`。如果访问 PyPI 较慢，可以在 `.env` 中配置 pip 镜像源：
 

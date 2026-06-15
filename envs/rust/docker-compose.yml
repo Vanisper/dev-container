@@ -11,7 +11,7 @@ services:
         - UID=${DEV_UID:-1000}
         - GID=${DEV_GID:-1000}
         - APT_MIRROR=${APT_MIRROR:-}
-        - APT_PACKAGES=sudo git vim ca-certificates pkg-config libssl-dev
+        - APT_PACKAGES=sudo git vim tmux ca-certificates pkg-config libssl-dev
     image: dev-rust:latest
     container_name: ${COMPOSE_PROJECT_NAME:-dev}-rust
     volumes:
