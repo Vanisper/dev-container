@@ -15,6 +15,20 @@ cd hello-api
 
 ## 添加依赖
 
+如果 `cargo add` 报错 `Could not resolve host: index.crates.io`，先在仓库根目录的 `.env` 里加上 Cargo 镜像源：
+
+```bash
+CARGO_REGISTRY_MIRROR=sparse+https://mirrors.tuna.tsinghua.edu.cn/crates.io-index/
+```
+
+然后在宿主机重新初始化并进入 Rust 环境：
+
+```bash
+make init ENV=rust
+make up ENV=rust
+make enter ENV=rust
+```
+
 通过 `cargo add` 添加运行时依赖和测试依赖：
 
 ```bash

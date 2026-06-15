@@ -6,6 +6,7 @@ ARG UID=1000
 ARG GID=1000
 ARG APT_MIRROR=""
 ARG APT_PACKAGES="sudo git vim tmux ca-certificates"
+ARG CARGO_REGISTRY_MIRROR=""
 ARG PIP_INDEX_URL=""
 ARG PIP_PACKAGES=""
 
@@ -49,6 +50,24 @@ RUN if [ -n "$PIP_INDEX_URL" ]; then \
     fi && \
     if [ -n "$PIP_PACKAGES" ]; then \
         pip install --no-cache-dir $PIP_PACKAGES; \
+    fi
+
+RUN if [ -n "$CARGO_REGISTRY_MIRROR" ]; then \
+        cargo_home="${CARGO_HOME:-/usr/local/cargo}"; \
+        mirror_url="$CARGO_REGISTRY_MIRROR"; \
+        case "$mirror_url" in sparse+*) ;; *) mirror_url="sparse+$mirror_url" ;; esac; \
+        case "$mirror_url" in */) ;; *) mirror_url="$mirror_url/" ;; esac; \
+        mkdir -p "$cargo_home" && \
+        printf '%s\n' \
+            '[source.crates-io]' \
+            'replace-with = "mirror"' \
+            '' \
+            '[source.mirror]' \
+            "registry = \"$mirror_url\"" \
+            '' \
+            '[registries.mirror]' \
+            "index = \"$mirror_url\"" \
+            > "$cargo_home/config.toml"; \
     fi
 
 USER dev

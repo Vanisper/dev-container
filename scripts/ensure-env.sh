@@ -47,6 +47,7 @@ shared_host=$(get_env_value SHARED_HOST)
 compose_project_name=$(get_env_value COMPOSE_PROJECT_NAME)
 apt_mirror=$(get_env_value APT_MIRROR)
 pip_index_url=$(get_env_value PIP_INDEX_URL)
+cargo_registry_mirror=$(get_env_value CARGO_REGISTRY_MIRROR)
 dev_uid=$(get_env_value DEV_UID)
 dev_gid=$(get_env_value DEV_GID)
 legacy_uid=$(get_env_value UID)
@@ -76,6 +77,9 @@ fi
 if ! grep -q '^PIP_INDEX_URL=' .env; then
     needs_update=1
 fi
+if ! grep -q '^CARGO_REGISTRY_MIRROR=' .env; then
+    needs_update=1
+fi
 if ! grep -q '容器内 dev 用户 ID' .env; then
     needs_update=1
 fi
@@ -103,6 +107,10 @@ APT_MIRROR=${apt_mirror:-}
 # 可选：Python pip 镜像源。Python 环境构建和后续 pip install 会使用。
 # 示例：PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 PIP_INDEX_URL=${pip_index_url:-}
+
+# 可选：Rust crates.io 镜像源。Rust 环境构建时会写入 Cargo config。
+# 示例：CARGO_REGISTRY_MIRROR=sparse+https://mirrors.tuna.tsinghua.edu.cn/crates.io-index/
+CARGO_REGISTRY_MIRROR=${cargo_registry_mirror:-}
 EOF
     mv "$tmp_env" .env
     echo "✅ 已更新 .env"
