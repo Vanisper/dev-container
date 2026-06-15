@@ -171,7 +171,7 @@ workspace/
 
 容器内统一使用 `dev` 用户运行，而非 root：
 
-- **UID/GID 对齐**：`init.sh` 会把宿主机当前用户的 `id -u` 和 `id -g` 写入 `.env`，`Dockerfile.base` 构建时用这组数字创建容器内的 `dev` 用户
+- **UID/GID 对齐**：`init.sh` 会把容器内 `dev` 用户使用的 `DEV_UID` 和 `DEV_GID` 写入 `.env`，`Dockerfile.base` 构建时用这组数字创建容器内的 `dev` 用户
 - **sudo 可用**：`dev` 拥有免密 sudo 权限，需要 root 时可以直接执行 `sudo apt install xxx`
 - **安全习惯**：日常开发不用 root，减少误操作风险；需要系统级权限时再显式使用 `sudo`
 
@@ -179,7 +179,9 @@ workspace/
 
 Linux 文件权限认的是数字 UID/GID，而不是用户名。`workspace/` 是宿主机目录挂载到容器里的，如果容器内用户和宿主机用户的 UID/GID 不一致，容器创建的文件在宿主机上可能变成“别的用户”的文件，导致编辑器无法保存、`rm`/`git clean` 权限不足，或者 `node_modules`、`target`、缓存目录权限混乱。
 
-Mac 用户常见 UID/GID 是 `501/20`，Linux 用户常见是 `1000/1000`。Docker Desktop for Mac 会做一层文件共享转换，所以问题有时不明显；但在 Colima、远程 Linux、CI 或直接使用 Linux Docker 时，UID/GID 不一致会更直接地暴露出来。因此初始化时自动写入当前宿主机的 UID/GID，可以让容器内 `dev` 用户尽量像“宿主机当前用户”一样写文件。
+Mac 用户常见 UID/GID 是 `501/20`，Linux 普通用户常见是 `1000/1000`。Docker Desktop for Mac 会做一层文件共享转换，所以问题有时不明显；但在 Colima、远程 Linux、CI 或直接使用 Linux Docker 时，UID/GID 不一致会更直接地暴露出来。因此初始化时会自动写入合适的 `DEV_UID/DEV_GID`，让容器内 `dev` 用户尽量像“宿主机当前用户”一样写文件。
+
+如果你在 Linux 服务器上直接用 `root` 用户运行，宿主机的 `id -u` 和 `id -g` 会是 `0/0`。容器内 `dev` 不能使用 `0/0`，否则就等于把开发用户变成 root，还会触发基础镜像里 root 用户无法被改名的问题。因此 `init.sh` 检测到宿主机是 root 时，会自动把容器内 `dev` 固定为 `1000/1000`，并整理 `workspace/`、`volumes/` 的目录权限。
 
 **sudo 免密是什么意思？**
 
@@ -195,8 +197,9 @@ Mac 用户常见 UID/GID 是 `501/20`，Linux 用户常见是 `1000/1000`。Dock
 
 ### Linux 服务器
 
-- UID 通常为 `1000`，脚本自动适配
-- 无需额外配置
+- 普通用户 UID/GID 通常为 `1000/1000`，脚本自动适配
+- 如果直接用 root 运行，脚本会让容器内 `dev` 使用 `1000/1000`，避免使用 `0/0`
+- 旧版 `.env` 中的 `UID/GID` 会在初始化时迁移为 `DEV_UID/DEV_GID`
 
 ## 初始化问题排查
 

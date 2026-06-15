@@ -7,7 +7,11 @@ ARG GID=1000
 ARG APT_PACKAGES="sudo git vim"
 ARG PIP_PACKAGES=""
 
-RUN existing_group="$(getent group "${GID}" | cut -d: -f1)" && \
+RUN if [ "${UID}" = "0" ] || [ "${GID}" = "0" ]; then \
+        echo "UID/GID must not be 0. Regenerate .env with scripts/init.sh; root hosts should use DEV_UID/DEV_GID=1000." >&2; \
+        exit 1; \
+    fi && \
+    existing_group="$(getent group "${GID}" | cut -d: -f1)" && \
     if [ -n "$existing_group" ]; then \
         group_name="$existing_group"; \
     elif getent group dev >/dev/null; then \

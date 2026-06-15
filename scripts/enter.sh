@@ -24,10 +24,9 @@ if [ ! -f "envs/$ENV_NAME/docker-compose.yml" ]; then
     exit 1
 fi
 
-COMPOSE=(env "COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-dev}" docker compose)
-if [ -f .env ]; then
-    COMPOSE+=(--env-file .env)
-fi
+"$SCRIPT_DIR/ensure-env.sh"
+ENV_PROJECT_NAME="$(sed -n 's/^COMPOSE_PROJECT_NAME=//p' .env | tail -n 1)"
+COMPOSE=(env "COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-${ENV_PROJECT_NAME:-dev}}" docker compose --env-file .env)
 COMPOSE+=(-f "envs/$ENV_NAME/docker-compose.yml")
 
 # 检查容器是否运行

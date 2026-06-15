@@ -8,8 +8,8 @@ services:
       dockerfile: Dockerfile.base
       args:
         - BASE_IMAGE=golang:latest
-        - UID=${UID:-1000}
-        - GID=${GID:-1000}
+        - UID=${DEV_UID:-1000}
+        - GID=${DEV_GID:-1000}
     image: dev-go:latest
     container_name: ${COMPOSE_PROJECT_NAME:-dev}-go
     volumes:

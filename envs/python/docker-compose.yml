@@ -8,8 +8,8 @@ services:
       dockerfile: Dockerfile.base
       args:
         - BASE_IMAGE=python:3.12
-        - UID=${UID:-1000}
-        - GID=${GID:-1000}
+        - UID=${DEV_UID:-1000}
+        - GID=${DEV_GID:-1000}
         - PIP_PACKAGES=black flake8 pytest ipython
     image: dev-python:latest
     container_name: ${COMPOSE_PROJECT_NAME:-dev}-python

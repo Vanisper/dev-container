@@ -29,23 +29,7 @@ NC='\033[0m'
 
 echo "➡️  初始化 $ENV_NAME..."
 
-if [ ! -f .env ]; then
-    cat > .env <<EOF
-# 代码工作区（按项目分，所有容器共享）
-WORKSPACE_HOST=$PROJECT_ROOT/workspace
-
-# 共享配置路径（git、ssh、bash、vim 等，所有容器共用）
-SHARED_HOST=$PROJECT_ROOT/shared
-
-# 容器内用户 ID（Mac 通常是 501，Linux 通常是 1000）
-UID=$(id -u)
-GID=$(id -g)
-
-# 容器名前缀（避免多人共用服务器冲突）
-COMPOSE_PROJECT_NAME=dev
-EOF
-    echo "✅ 已生成 .env"
-fi
+"$SCRIPT_DIR/ensure-env.sh"
 COMPOSE=(docker compose --env-file .env -f "envs/$ENV_NAME/docker-compose.yml")
 
 # 创建共享目录和对应 volumes
@@ -68,6 +52,12 @@ case $ENV_NAME in
         mkdir -p "volumes/$ENV_NAME-cache"
         ;;
 esac
+
+DEV_UID="$(sed -n 's/^DEV_UID=//p' .env | tail -n 1)"
+DEV_GID="$(sed -n 's/^DEV_GID=//p' .env | tail -n 1)"
+if [ "$(id -u)" = "0" ] || [ "$(id -g)" = "0" ]; then
+    chown -R "${DEV_UID}:${DEV_GID}" workspace volumes
+fi
 
 # 构建镜像
 "${COMPOSE[@]}" build
