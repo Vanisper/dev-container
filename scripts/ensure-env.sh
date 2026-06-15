@@ -109,7 +109,7 @@ APT_MIRROR=${apt_mirror:-}
 PIP_INDEX_URL=${pip_index_url:-}
 
 # 可选：Rust crates.io 镜像源。Rust 环境构建时会写入 Cargo config。
-# 示例：CARGO_REGISTRY_MIRROR=sparse+https://mirrors.tuna.tsinghua.edu.cn/crates.io-index/
+# 示例：CARGO_REGISTRY_MIRROR=sparse+https://mirrors.ustc.edu.cn/crates.io-index/
 CARGO_REGISTRY_MIRROR=${cargo_registry_mirror:-}
 EOF
     mv "$tmp_env" .env

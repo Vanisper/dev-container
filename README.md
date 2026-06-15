@@ -270,13 +270,13 @@ PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 
 设置后会写入镜像内的 `/etc/pip.conf`，构建阶段和进入容器后的 `pip install` 都会默认使用这个源。修改后重新执行 `make init ENV=python` 即可生效。
 
-Rust 环境执行 `cargo add` 或 `cargo build` 时需要访问 crates.io。如果看到 `Could not resolve host: index.crates.io`，通常是容器内 DNS 或网络无法访问 crates.io 索引。可以在 `.env` 中配置 Cargo 镜像源：
+Rust 环境执行 `cargo add` 或 `cargo build` 时需要访问 crates.io。如果看到 `Could not resolve host: index.crates.io` 或 `Could not resolve host: static.crates.io`，通常是容器内 DNS 或网络无法访问 crates.io 索引或 crate 下载地址。可以在 `.env` 中配置 Cargo 镜像源：
 
 ```bash
-CARGO_REGISTRY_MIRROR=sparse+https://mirrors.tuna.tsinghua.edu.cn/crates.io-index/
+CARGO_REGISTRY_MIRROR=sparse+https://mirrors.ustc.edu.cn/crates.io-index/
 ```
 
-设置后会写入镜像内的 `$CARGO_HOME/config.toml`，让 crates.io 自动替换为镜像源。修改后重新执行 `make init ENV=rust`，再重新启动/进入 Rust 容器即可生效。
+设置后会写入镜像内的 `$CARGO_HOME/config.toml`，让 crates.io 自动替换为镜像源。这里推荐 USTC 是因为它的 crates.io index 配置同时代理索引和 crate 包下载；TUNA 的 crates.io index 仍可能把包下载指向 `static.crates.io`。修改后重新执行 `make init ENV=rust`，再重新启动/进入 Rust 容器即可生效。
 
 ## 扩展新环境
 
