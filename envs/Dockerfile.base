@@ -6,6 +6,7 @@ ARG UID=1000
 ARG GID=1000
 ARG APT_MIRROR=""
 ARG APT_PACKAGES="sudo git vim ca-certificates"
+ARG PIP_INDEX_URL=""
 ARG PIP_PACKAGES=""
 
 RUN if [ "${UID}" = "0" ] || [ "${GID}" = "0" ]; then \
@@ -43,7 +44,10 @@ RUN if [ "${UID}" = "0" ] || [ "${GID}" = "0" ]; then \
     echo "dev ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
     rm -rf /var/lib/apt/lists/*
 
-RUN if [ -n "$PIP_PACKAGES" ]; then \
+RUN if [ -n "$PIP_INDEX_URL" ]; then \
+        printf '%s\n' '[global]' "index-url = $PIP_INDEX_URL" > /etc/pip.conf; \
+    fi && \
+    if [ -n "$PIP_PACKAGES" ]; then \
         pip install --no-cache-dir $PIP_PACKAGES; \
     fi
 

@@ -46,6 +46,7 @@ workspace_host=$(get_env_value WORKSPACE_HOST)
 shared_host=$(get_env_value SHARED_HOST)
 compose_project_name=$(get_env_value COMPOSE_PROJECT_NAME)
 apt_mirror=$(get_env_value APT_MIRROR)
+pip_index_url=$(get_env_value PIP_INDEX_URL)
 dev_uid=$(get_env_value DEV_UID)
 dev_gid=$(get_env_value DEV_GID)
 legacy_uid=$(get_env_value UID)
@@ -72,6 +73,9 @@ fi
 if ! grep -q '^APT_MIRROR=' .env; then
     needs_update=1
 fi
+if ! grep -q '^PIP_INDEX_URL=' .env; then
+    needs_update=1
+fi
 if ! grep -q '容器内 dev 用户 ID' .env; then
     needs_update=1
 fi
@@ -95,6 +99,10 @@ COMPOSE_PROJECT_NAME=${compose_project_name:-dev}
 # 可选：Debian apt 镜像源。服务器访问 deb.debian.org 很慢时可启用。
 # 示例：APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/debian
 APT_MIRROR=${apt_mirror:-}
+
+# 可选：Python pip 镜像源。Python 环境构建和后续 pip install 会使用。
+# 示例：PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+PIP_INDEX_URL=${pip_index_url:-}
 EOF
     mv "$tmp_env" .env
     echo "✅ 已更新 .env"

@@ -232,6 +232,14 @@ APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/debian
 
 基础镜像默认安装 `sudo git vim ca-certificates`，Rust 额外安装 `pkg-config libssl-dev`。如果服务器构建时下载 `vim-runtime` 等 Debian 包很慢，优先配置上面的 `APT_MIRROR`，再重新执行 `make init ENV=<name>`。
 
+Python 环境还会在构建时安装 `black flake8 pytest ipython`。如果访问 PyPI 较慢，可以在 `.env` 中配置 pip 镜像源：
+
+```bash
+PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+设置后会写入镜像内的 `/etc/pip.conf`，构建阶段和进入容器后的 `pip install` 都会默认使用这个源。修改后重新执行 `make init ENV=python` 即可生效。
+
 ## 扩展新环境
 
 以添加 **Java** 为例：
