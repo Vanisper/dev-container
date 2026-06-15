@@ -24,6 +24,8 @@ dev-container/
 │   ├── init.sh            # 初始化指定环境
 │   ├── enter.sh           # 进入指定环境
 │   └── tmux.sh            # 进入/附着指定环境的 Tmux 会话
+├── docs/                  # 示例文档
+│   └── rust-hello-api.md  # Rust hello-api 与 Cargo 包管理示例
 ├── workspace/             # 代码工作区（按项目分）
 │   └── hello-api/
 ├── volumes/               # 容器数据卷（缓存、编译产物）
@@ -58,10 +60,12 @@ make up
 make enter
 
 # 容器内
-cargo new /workspace/hello-api
+cargo new /workspace/hello-api --bin
 cd /workspace/hello-api
 cargo run
 ```
+
+更完整的 Cargo 包管理示例见 [docs/rust-hello-api.md](docs/rust-hello-api.md)。
 
 ## 多环境操作
 
